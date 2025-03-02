@@ -72,6 +72,9 @@ var (
 	// ErrIsDir is returned when a reference file is attempting to be read,
 	// but the path specified is a directory.
 	ErrIsDir = errors.New("reference path is a directory")
+	// ErrEmptyRefFile is returned when a reference file is attempted to be read,
+	// but the file is empty
+	ErrEmptyRefFile = errors.New("ref file is empty")
 )
 
 // Options holds configuration for the storage.
@@ -661,18 +664,33 @@ func (d *DotGit) readReferenceFrom(rd io.Reader, name string) (ref *plumbing.Ref
 		return nil, err
 	}
 
+	if len(b) == 0 {
+		return nil, ErrEmptyRefFile
+	}
+
 	line := strings.TrimSpace(string(b))
 	return plumbing.NewReferenceFromStrings(name, line), nil
 }
 
+// checkReferenceAndTruncate reads the reference from the given file, or the `pack-refs` file if
+// the file was empty. Then it checks that the old reference matches the stored reference and
+// truncates the file.
 func (d *DotGit) checkReferenceAndTruncate(f billy.File, old *plumbing.Reference) error {
 	if old == nil {
 		return nil
 	}
+
 	ref, err := d.readReferenceFrom(f, old.Name().String())
+	if errors.Is(err, ErrEmptyRefFile) {
+		// This may happen if the reference is being read from a newly created file.
+		// In that case, try getting the reference from the packed refs file.
+		ref, err = d.packedRef(old.Name())
+	}
+
 	if err != nil {
 		return err
 	}
+
 	if ref.Hash() != old.Hash() {
 		return storage.ErrReferenceHasChanged
 	}
@@ -832,9 +850,15 @@ func (d *DotGit) openAndLockPackedRefs(doCreate bool) (
 		openFlags |= os.O_CREATE
 	}
 
+	start := time.Now()
 	// Keep trying to open and lock the file until we're sure the file
 	// didn't change between the open and the lock.
 	for {
+		// The arbitrary timeout should eventually be replaced with
+		// context-based check.
+		if time.Since(start) > 15*time.Second {
+			return nil, errors.New("timeout trying to lock packed refs")
+		}
 		f, err = d.fs.OpenFile(packedRefsPath, openFlags, 0600)
 		if err != nil {
 			if os.IsNotExist(err) && !doCreate {

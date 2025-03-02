@@ -4,19 +4,21 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"github.com/grahambrooks/go-git/v5/utils/trace"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/grahambrooks/go-git/v5/plumbing/transport"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport/internal/common"
-	"github.com/skeema/knownhosts"
-
 	"github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/proxy"
 )
+
+func init() {
+	transport.Register("ssh", DefaultClient)
+}
 
 // DefaultClient is the default SSH client.
 var DefaultClient = NewClient(nil)
@@ -31,12 +33,13 @@ type sshConfig interface {
 
 // NewClient creates a new SSH client with an optional *ssh.ClientConfig.
 func NewClient(config *ssh.ClientConfig) transport.Transport {
-	return common.NewClient(&runner{config: config})
+	return transport.NewClient(&runner{config: config})
 }
 
 // DefaultAuthBuilder is the function used to create a default AuthMethod, when
 // the user doesn't provide any.
 var DefaultAuthBuilder = func(user string) (AuthMethod, error) {
+	trace.SSH.Printf("ssh: Using default auth builder (user: %s)", user)
 	return NewSSHAgentAuth(user)
 }
 
@@ -46,7 +49,7 @@ type runner struct {
 	config *ssh.ClientConfig
 }
 
-func (r *runner) Command(cmd string, ep *transport.Endpoint, auth transport.AuthMethod) (common.Command, error) {
+func (r *runner) Command(cmd string, ep *transport.Endpoint, auth transport.AuthMethod) (transport.Command, error) {
 	c := &command{command: cmd, endpoint: ep, config: r.config}
 	if auth != nil {
 		if err := c.setAuth(auth); err != nil {
@@ -127,18 +130,28 @@ func (c *command) connect() error {
 	}
 	hostWithPort := c.getHostWithPort()
 	if config.HostKeyCallback == nil {
-		kh, err := newKnownHosts()
+		db, err := newKnownHostsDb()
 		if err != nil {
 			return err
 		}
-		config.HostKeyCallback = kh.HostKeyCallback()
-		config.HostKeyAlgorithms = kh.HostKeyAlgorithms(hostWithPort)
+
+		config.HostKeyCallback = db.HostKeyCallback()
+		config.HostKeyAlgorithms = db.HostKeyAlgorithms(hostWithPort)
 	} else if len(config.HostKeyAlgorithms) == 0 {
 		// Set the HostKeyAlgorithms based on HostKeyCallback.
 		// For background see https://github.com/grahambrooks/go-git/issues/411 as well as
 		// https://github.com/golang/go/issues/29286 for root cause.
-		config.HostKeyAlgorithms = knownhosts.HostKeyAlgorithms(config.HostKeyCallback, hostWithPort)
+		db, err := newKnownHostsDb()
+		if err != nil {
+			return err
+		}
+
+		// Note that the knownhost database is used, as it provides additional functionality
+		// to handle ssh cert-authorities.
+		config.HostKeyAlgorithms = db.HostKeyAlgorithms(hostWithPort)
 	}
+
+	trace.SSH.Printf("ssh: host key algorithms %s", config.HostKeyAlgorithms)
 
 	overrideConfig(c.config, config)
 
@@ -177,6 +190,8 @@ func dial(network, addr string, proxyOpts transport.ProxyOptions, config *ssh.Cl
 		if err != nil {
 			return nil, err
 		}
+
+		trace.SSH.Printf("ssh: using proxyURL=%s", proxyUrl)
 		dialer, err := proxy.FromURL(proxyUrl, proxy.Direct)
 		if err != nil {
 			return nil, err

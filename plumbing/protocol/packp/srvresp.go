@@ -9,6 +9,8 @@ import (
 
 	"github.com/grahambrooks/go-git/v5/plumbing"
 	"github.com/grahambrooks/go-git/v5/plumbing/format/pktline"
+	"github.com/grahambrooks/go-git/v5/plumbing/protocol/packp/capability"
+	"github.com/grahambrooks/go-git/v5/utils/ioutil"
 )
 
 const ackLineLen = 44
@@ -16,24 +18,30 @@ const ackLineLen = 44
 // ServerResponse object acknowledgement from upload-pack service
 type ServerResponse struct {
 	ACKs []plumbing.Hash
+	req  *UploadPackRequest
 }
 
 // Decode decodes the response into the struct, isMultiACK should be true, if
 // the request was done with multi_ack or multi_ack_detailed capabilities.
-func (r *ServerResponse) Decode(reader *bufio.Reader, isMultiACK bool) error {
-	s := pktline.NewScanner(reader)
+func (r *ServerResponse) Decode(reader io.Reader, isMultiACK bool) error {
+	s := bufio.NewReader(reader)
 
-	for s.Scan() {
-		line := s.Bytes()
+	var err error
+	for {
+		var p []byte
+		_, p, err = pktline.ReadLine(s)
+		if err != nil {
+			break
+		}
 
-		if err := r.decodeLine(line); err != nil {
+		if err := r.decodeLine(p); err != nil {
 			return err
 		}
 
 		// we need to detect when the end of a response header and the beginning
 		// of a packfile header happened, some requests to the git daemon
 		// produces a duplicate ACK header even when multi_ack is not supported.
-		stop, err := r.stopReading(reader)
+		stop, err := r.stopReading(s)
 		if err != nil {
 			return err
 		}
@@ -43,20 +51,8 @@ func (r *ServerResponse) Decode(reader *bufio.Reader, isMultiACK bool) error {
 		}
 	}
 
-	// isMultiACK is true when the remote server advertises the related
-	// capabilities when they are not in transport.UnsupportedCapabilities.
-	//
-	// Users may decide to remove multi_ack and multi_ack_detailed from the
-	// unsupported capabilities list, which allows them to do initial clones
-	// from Azure DevOps.
-	//
-	// Follow-up fetches may error, therefore errors are wrapped with additional
-	// information highlighting that this capabilities are not supported by go-git.
-	//
-	// TODO: Implement support for multi_ack or multi_ack_detailed responses.
-	err := s.Err()
-	if err != nil && isMultiACK {
-		return fmt.Errorf("multi_ack and multi_ack_detailed are not supported: %w", err)
+	if errors.Is(err, io.EOF) {
+		return nil
 	}
 
 	return err
@@ -64,9 +60,9 @@ func (r *ServerResponse) Decode(reader *bufio.Reader, isMultiACK bool) error {
 
 // stopReading detects when a valid command such as ACK or NAK is found to be
 // read in the buffer without moving the read pointer.
-func (r *ServerResponse) stopReading(reader *bufio.Reader) (bool, error) {
+func (r *ServerResponse) stopReading(reader ioutil.ReadPeeker) (bool, error) {
 	ahead, err := reader.Peek(7)
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		return true, nil
 	}
 
@@ -120,22 +116,83 @@ func (r *ServerResponse) decodeACKLine(line []byte) error {
 	}
 
 	sp := bytes.Index(line, []byte(" "))
+	if sp+41 > len(line) {
+		return fmt.Errorf("malformed ACK %q", line)
+	}
 	h := plumbing.NewHash(string(line[sp+1 : sp+41]))
 	r.ACKs = append(r.ACKs, h)
 	return nil
 }
 
 // Encode encodes the ServerResponse into a writer.
-func (r *ServerResponse) Encode(w io.Writer, isMultiACK bool) error {
-	if len(r.ACKs) > 1 && !isMultiACK {
-		// For further information, refer to comments in the Decode func above.
-		return errors.New("multi_ack and multi_ack_detailed are not supported")
+func (r *ServerResponse) Encode(w io.Writer) error {
+	multiAck := r.req.Capabilities.Supports(capability.MultiACK)
+	multiAckDetailed := r.req.Capabilities.Supports(capability.MultiACKDetailed)
+	readyHash := plumbing.ZeroHash
+	finalHash := plumbing.ZeroHash
+	for cmd := range r.req.UploadPackCommands {
+		if multiAck { //multi_ack
+			for _, h := range cmd.Acks {
+				if h.IsReady && readyHash.IsZero() {
+					readyHash = h.Hash
+				}
+				if h.IsCommon || !readyHash.IsZero() {
+					finalHash = h.Hash
+					if _, err := pktline.Writef(w, "%s %s continue\n", ack, h.Hash.String()); err != nil {
+						return err
+					}
+				}
+			}
+			if !cmd.Done {
+				if _, err := pktline.WriteString(w, string(nak)+"\n"); err != nil {
+					return err
+				}
+			}
+		} else if multiAckDetailed { //multi_ack_detailed
+			for _, h := range cmd.Acks {
+				if h.IsReady {
+					readyHash = h.Hash
+					finalHash = h.Hash
+					if _, err := pktline.Writef(w, "%s %s ready\n", ack, h.Hash.String()); err != nil {
+						return err
+					}
+				} else if h.IsCommon {
+					finalHash = h.Hash
+					if _, err := pktline.Writef(w, "%s %s common\n", ack, h.Hash.String()); err != nil {
+						return err
+					}
+				}
+			}
+			if !cmd.Done {
+				if _, err := pktline.WriteString(w, string(nak)+"\n"); err != nil {
+					return err
+				}
+			}
+		} else { // single ack
+			for _, h := range cmd.Acks {
+				if h.IsCommon && finalHash.IsZero() {
+					finalHash = h.Hash
+					if _, err := pktline.Writef(w, "%s %s\n", ack, finalHash.String()); err != nil {
+						return err
+					}
+					break
+				}
+			}
+			if !cmd.Done && finalHash.IsZero() {
+				if _, err := pktline.WriteString(w, string(nak)+"\n"); err != nil {
+					return err
+				}
+			}
+		}
 	}
-
-	e := pktline.NewEncoder(w)
-	if len(r.ACKs) == 0 {
-		return e.Encodef("%s\n", nak)
+	if !finalHash.IsZero() && (multiAck || multiAckDetailed) {
+		if _, err := pktline.Writef(w, "%s %s\n", ack, finalHash.String()); err != nil {
+			return err
+		}
+	} else if finalHash.IsZero() {
+		if _, err := pktline.WriteString(w, string(nak)+"\n"); err != nil {
+			return err
+		}
 	}
-
-	return e.Encodef("%s %s\n", ack, r.ACKs[0].String())
+	return nil
 }

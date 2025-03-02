@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/grahambrooks/go-git/v5/utils/trace"
 	"io"
 	"os"
 	"path"
@@ -231,6 +232,15 @@ func Clone(s storage.Storer, worktree billy.Filesystem, o *CloneOptions) (*Repos
 func CloneContext(
 	ctx context.Context, s storage.Storer, worktree billy.Filesystem, o *CloneOptions,
 ) (*Repository, error) {
+	start := time.Now()
+	defer func() {
+		url := ""
+		if o != nil {
+			url = o.URL
+		}
+		trace.Performance.Printf("performance: %.9f s: git command: git clone %s", time.Since(start).Seconds(), url)
+	}()
+
 	r, err := Init(s, worktree)
 	if err != nil {
 		return nil, err
@@ -256,9 +266,9 @@ func PlainInitWithOptions(path string, opts *PlainInitOptions) (*Repository, err
 	var wt, dot billy.Filesystem
 
 	if opts.Bare {
-		dot = osfs.New(path)
+		dot = osfs.New(path, osfs.WithBoundOS())
 	} else {
-		wt = osfs.New(path)
+		wt = osfs.New(path, osfs.WithBoundOS())
 		dot, _ = wt.Chroot(GitDirName)
 	}
 
@@ -344,7 +354,7 @@ func dotGitToOSFilesystems(path string, detect bool) (dot, wt billy.Filesystem, 
 	var fs billy.Filesystem
 	var fi os.FileInfo
 	for {
-		fs = osfs.New(path)
+		fs = osfs.New(path, osfs.WithBoundOS())
 
 		pathinfo, err := fs.Stat("/")
 		if !os.IsNotExist(err) {
@@ -352,7 +362,7 @@ func dotGitToOSFilesystems(path string, detect bool) (dot, wt billy.Filesystem, 
 				return nil, nil, err
 			}
 			if !pathinfo.IsDir() && detect {
-				fs = osfs.New(filepath.Dir(path))
+				fs = osfs.New(filepath.Dir(path), osfs.WithBoundOS())
 			}
 		}
 
@@ -412,10 +422,10 @@ func dotGitFileToOSFilesystem(path string, fs billy.Filesystem) (bfs billy.Files
 	gitdir := strings.Split(line[len(prefix):], "\n")[0]
 	gitdir = strings.TrimSpace(gitdir)
 	if filepath.IsAbs(gitdir) {
-		return osfs.New(gitdir), nil
+		return osfs.New(gitdir, osfs.WithBoundOS()), nil
 	}
 
-	return osfs.New(fs.Join(path, gitdir)), nil
+	return osfs.New(fs.Join(path, gitdir), osfs.WithBoundOS()), nil
 }
 
 func dotGitCommonDirectory(fs billy.Filesystem) (commonDir billy.Filesystem, err error) {
@@ -434,9 +444,9 @@ func dotGitCommonDirectory(fs billy.Filesystem) (commonDir billy.Filesystem, err
 	if len(b) > 0 {
 		path := strings.TrimSpace(string(b))
 		if filepath.IsAbs(path) {
-			commonDir = osfs.New(path)
+			commonDir = osfs.New(path, osfs.WithBoundOS())
 		} else {
-			commonDir = osfs.New(filepath.Join(fs.Root(), path))
+			commonDir = osfs.New(filepath.Join(fs.Root(), path), osfs.WithBoundOS())
 		}
 		if _, err := commonDir.Stat(""); err != nil {
 			if os.IsNotExist(err) {
@@ -470,6 +480,15 @@ func PlainClone(path string, isBare bool, o *CloneOptions) (*Repository, error) 
 // TODO(mcuadros): move isBare to CloneOptions in v5
 // TODO(smola): refuse upfront to clone on a non-empty directory in v5, see #1027
 func PlainCloneContext(ctx context.Context, path string, isBare bool, o *CloneOptions) (*Repository, error) {
+	start := time.Now()
+	defer func() {
+		url := ""
+		if o != nil {
+			url = o.URL
+		}
+		trace.Performance.Printf("performance: %.9f s: git command: git clone %s", time.Since(start).Seconds(), url)
+	}()
+
 	cleanup, cleanupParent, err := checkIfCleanupIsNeeded(path)
 	if err != nil {
 		return nil, err
@@ -932,6 +951,7 @@ func (r *Repository) clone(ctx context.Context, o *CloneOptions) error {
 		InsecureSkipTLS: o.InsecureSkipTLS,
 		CABundle:        o.CABundle,
 		ProxyOptions:    o.ProxyOptions,
+		Filter:          o.Filter,
 	}, o.ReferenceName)
 	if err != nil {
 		return err
@@ -956,7 +976,7 @@ func (r *Repository) clone(ctx context.Context, o *CloneOptions) error {
 		}
 
 		if o.RecurseSubmodules != NoRecurseSubmodules {
-			if err := w.updateSubmodules(&SubmoduleUpdateOptions{
+			if err := w.updateSubmodules(ctx, &SubmoduleUpdateOptions{
 				RecurseSubmodules: o.RecurseSubmodules,
 				Depth: func() int {
 					if o.ShallowSubmodules {
@@ -1037,7 +1057,7 @@ func (r *Repository) setIsBare(isBare bool) error {
 	return r.Storer.SetConfig(cfg)
 }
 
-func (r *Repository) updateRemoteConfigIfNeeded(o *CloneOptions, c *config.RemoteConfig, head *plumbing.Reference) error {
+func (r *Repository) updateRemoteConfigIfNeeded(o *CloneOptions, c *config.RemoteConfig, _ *plumbing.Reference) error {
 	if !o.SingleBranch {
 		return nil
 	}
@@ -1264,8 +1284,8 @@ func (r *Repository) Log(o *LogOptions) (object.CommitIter, error) {
 		it = r.logWithPathFilter(o.PathFilter, it, o.All)
 	}
 
-	if o.Since != nil || o.Until != nil {
-		limitOptions := object.LogLimitOptions{Since: o.Since, Until: o.Until}
+	if o.Since != nil || o.Until != nil || !o.To.IsZero() {
+		limitOptions := object.LogLimitOptions{Since: o.Since, Until: o.Until, TailHash: o.To}
 		it = r.logWithLimit(it, limitOptions)
 	}
 

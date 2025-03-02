@@ -6,24 +6,26 @@ import (
 	"context"
 	"errors"
 	"io"
-
-	ctxio "github.com/jbenet/go-context/io"
 )
 
-type readPeeker interface {
-	io.Reader
+// Peeker is an interface for types that can peek at the next bytes.
+type Peeker interface {
 	Peek(int) ([]byte, error)
 }
 
-var (
-	ErrEmptyReader = errors.New("reader is empty")
-)
+// ReadPeeker is an interface that groups the basic Read and Peek methods.
+type ReadPeeker interface {
+	io.Reader
+	Peeker
+}
+
+var ErrEmptyReader = errors.New("reader is empty")
 
 // NonEmptyReader takes a reader and returns it if it is not empty, or
 // `ErrEmptyReader` if it is empty. If there is an error when reading the first
 // byte of the given reader, it will be propagated.
 func NonEmptyReader(r io.Reader) (io.Reader, error) {
-	pr, ok := r.(readPeeker)
+	pr, ok := r.(ReadPeeker)
 	if !ok {
 		pr = bufio.NewReader(r)
 	}
@@ -83,6 +85,9 @@ type writeCloser struct {
 }
 
 func (r *writeCloser) Close() error {
+	if r.closer == nil {
+		return nil
+	}
 	return r.closer.Close()
 }
 
@@ -131,29 +136,15 @@ func CheckClose(c io.Closer, err *error) {
 	}
 }
 
-// NewContextWriter wraps a writer to make it respect given Context.
-// If there is a blocking write, the returned Writer will return whenever the
-// context is cancelled (the return values are n=0 and err=ctx.Err()).
-func NewContextWriter(ctx context.Context, w io.Writer) io.Writer {
-	return ctxio.NewWriter(ctx, w)
-}
-
-// NewContextReader wraps a reader to make it respect given Context.
-// If there is a blocking read, the returned Reader will return whenever the
-// context is cancelled (the return values are n=0 and err=ctx.Err()).
-func NewContextReader(ctx context.Context, r io.Reader) io.Reader {
-	return ctxio.NewReader(ctx, r)
-}
-
 // NewContextWriteCloser as NewContextWriter but with io.Closer interface.
 func NewContextWriteCloser(ctx context.Context, w io.WriteCloser) io.WriteCloser {
-	ctxw := ctxio.NewWriter(ctx, w)
+	ctxw := NewContextWriter(ctx, w)
 	return NewWriteCloser(ctxw, w)
 }
 
 // NewContextReadCloser as NewContextReader but with io.Closer interface.
 func NewContextReadCloser(ctx context.Context, r io.ReadCloser) io.ReadCloser {
-	ctxr := ctxio.NewReader(ctx, r)
+	ctxr := NewContextReader(ctx, r)
 	return NewReadCloser(ctxr, r)
 }
 
@@ -207,4 +198,14 @@ func (r *writerOnError) Write(p []byte) (n int, err error) {
 	}
 
 	return
+}
+
+// CloserFunc implements the io.Closer interface with a function.
+type CloserFunc func() error
+
+var _ io.Closer = CloserFunc(nil)
+
+// Close calls the function.
+func (f CloserFunc) Close() error {
+	return f()
 }

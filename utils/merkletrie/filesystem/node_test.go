@@ -17,16 +17,17 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
-	. "gopkg.in/check.v1"
 )
 
-func Test(t *testing.T) { TestingT(t) }
+type NoderSuite struct {
+	suite.Suite
+}
 
-type NoderSuite struct{}
+func TestNoderSuite(t *testing.T) {
+	suite.Run(t, new(NoderSuite))
+}
 
-var _ = Suite(&NoderSuite{})
-
-func (s *NoderSuite) TestDiff(c *C) {
+func (s *NoderSuite) TestDiff() {
 	fsA := memfs.New()
 	WriteFile(fsA, "foo", []byte("foo"), 0644)
 	WriteFile(fsA, "qux/bar", []byte("foo"), 0644)
@@ -45,11 +46,11 @@ func (s *NoderSuite) TestDiff(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 0)
+	s.NoError(err)
+	s.Len(ch, 0)
 }
 
-func (s *NoderSuite) TestDiffChangeLink(c *C) {
+func (s *NoderSuite) TestDiffChangeLink() {
 	fsA := memfs.New()
 	fsA.Symlink("qux", "foo")
 
@@ -62,11 +63,11 @@ func (s *NoderSuite) TestDiffChangeLink(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 1)
+	s.NoError(err)
+	s.Len(ch, 1)
 }
 
-func (s *NoderSuite) TestDiffChangeContent(c *C) {
+func (s *NoderSuite) TestDiffChangeContent() {
 	fsA := memfs.New()
 	WriteFile(fsA, "foo", []byte("foo"), 0644)
 	WriteFile(fsA, "qux/bar", []byte("foo"), 0644)
@@ -83,11 +84,11 @@ func (s *NoderSuite) TestDiffChangeContent(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 1)
+	s.NoError(err)
+	s.Len(ch, 1)
 }
 
-func (s *NoderSuite) TestDiffSymlinkDirOnA(c *C) {
+func (s *NoderSuite) TestDiffSymlinkDirOnA() {
 	fsA := memfs.New()
 	WriteFile(fsA, "qux/qux", []byte("foo"), 0644)
 
@@ -101,11 +102,11 @@ func (s *NoderSuite) TestDiffSymlinkDirOnA(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 1)
+	s.NoError(err)
+	s.Len(ch, 1)
 }
 
-func (s *NoderSuite) TestDiffSymlinkDirOnB(c *C) {
+func (s *NoderSuite) TestDiffSymlinkDirOnB() {
 	fsA := memfs.New()
 	fsA.Symlink("qux", "foo")
 	WriteFile(fsA, "qux/qux", []byte("foo"), 0644)
@@ -119,11 +120,11 @@ func (s *NoderSuite) TestDiffSymlinkDirOnB(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 1)
+	s.NoError(err)
+	s.Len(ch, 1)
 }
 
-func (s *NoderSuite) TestDiffChangeMissing(c *C) {
+func (s *NoderSuite) TestDiffChangeMissing() {
 	fsA := memfs.New()
 	WriteFile(fsA, "foo", []byte("foo"), 0644)
 
@@ -136,11 +137,11 @@ func (s *NoderSuite) TestDiffChangeMissing(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 2)
+	s.NoError(err)
+	s.Len(ch, 2)
 }
 
-func (s *NoderSuite) TestDiffChangeMode(c *C) {
+func (s *NoderSuite) TestDiffChangeMode() {
 	fsA := memfs.New()
 	WriteFile(fsA, "foo", []byte("foo"), 0644)
 
@@ -153,11 +154,11 @@ func (s *NoderSuite) TestDiffChangeMode(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 1)
+	s.NoError(err)
+	s.Len(ch, 1)
 }
 
-func (s *NoderSuite) TestDiffChangeModeNotRelevant(c *C) {
+func (s *NoderSuite) TestDiffChangeModeNotRelevant() {
 	fsA := memfs.New()
 	WriteFile(fsA, "foo", []byte("foo"), 0644)
 
@@ -170,11 +171,11 @@ func (s *NoderSuite) TestDiffChangeModeNotRelevant(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 0)
+	s.NoError(err)
+	s.Len(ch, 0)
 }
 
-func (s *NoderSuite) TestDiffDirectory(c *C) {
+func (s *NoderSuite) TestDiffDirectory() {
 	dir := path.Join("qux", "bar")
 	fsA := memfs.New()
 	fsA.MkdirAll(dir, 0644)
@@ -192,25 +193,24 @@ func (s *NoderSuite) TestDiffDirectory(c *C) {
 		IsEquals,
 	)
 
-	c.Assert(err, IsNil)
-	c.Assert(ch, HasLen, 1)
+	s.NoError(err)
+	s.Len(ch, 1)
 
 	a, err := ch[0].Action()
-	c.Assert(err, IsNil)
-	c.Assert(a, Equals, merkletrie.Modify)
+	s.NoError(err)
+	s.Equal(merkletrie.Modify, a)
 }
 
-func (s *NoderSuite) TestSocket(c *C) {
+func (s *NoderSuite) TestSocket() {
 	if runtime.GOOS == "windows" {
-		c.Skip("socket files do not exist on windows")
+		s.T().Skip("socket files do not exist on windows")
 	}
 
 	td, err := os.MkdirTemp("", "socket-test")
-	defer os.RemoveAll(td)
-	c.Assert(err, IsNil)
+	s.NoError(err)
 
 	sock, err := net.ListenUnix("unix", &net.UnixAddr{Name: fmt.Sprintf("%s/socket", td), Net: "unix"})
-	c.Assert(err, IsNil)
+	s.NoError(err)
 	defer sock.Close()
 
 	fsA := osfs.New(td)
@@ -218,8 +218,8 @@ func (s *NoderSuite) TestSocket(c *C) {
 
 	noder := NewRootNode(fsA, nil)
 	childs, err := noder.Children()
-	c.Assert(err, IsNil)
-	c.Assert(childs, HasLen, 1)
+	s.NoError(err)
+	s.Len(childs, 1)
 }
 
 func WriteFile(fs billy.Filesystem, filename string, data []byte, perm os.FileMode) error {

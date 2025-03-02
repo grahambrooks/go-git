@@ -1,7 +1,12 @@
-on: [push, pull_request]
 name: Git Compatibility
-permissions:
-  contents: read
+on:
+  push:
+    branches:
+    - releases/v5.x
+    - main
+  pull_request:
+
+permissions: {}
 
 jobs:
   test:
@@ -15,6 +20,9 @@ jobs:
         GIT_VERSION: ${{ matrix.git[0] }}
         GIT_DIST_PATH: .git-dist/${{ matrix.git[0] }}
 
+    permissions:
+      contents: read
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -22,7 +30,7 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x
+        go-version: stable
 
     - name: Install build dependencies
       run: sudo apt-get update && sudo apt-get install gettext libcurl4-openssl-dev

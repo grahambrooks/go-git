@@ -36,7 +36,9 @@ func (o *MemoryObject) Size() int64 { return o.sz }
 
 // SetSize set the object size, a content of the given size should be written
 // afterwards
-func (o *MemoryObject) SetSize(s int64) { o.sz = s }
+func (o *MemoryObject) SetSize(s int64) {
+	o.sz = s
+}
 
 // Reader returns an io.ReadCloser used to read the object's content.
 //

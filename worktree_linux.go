@@ -22,6 +22,6 @@ func init() {
 	}
 }
 
-func isSymlinkWindowsNonAdmin(err error) bool {
+func isSymlinkWindowsNonAdmin(_ error) bool {
 	return false
 }

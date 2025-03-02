@@ -7,12 +7,16 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/grahambrooks/go-git/v5/plumbing/transport"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport/internal/common"
 	"golang.org/x/sys/execabs"
 )
+
+func init() {
+	transport.Register("file", DefaultClient)
+}
 
 // DefaultClient is the default local client.
 var DefaultClient = NewClient(
@@ -28,7 +32,7 @@ type runner struct {
 // NewClient returns a new local client using the given git-upload-pack and
 // git-receive-pack binaries.
 func NewClient(uploadPackBin, receivePackBin string) transport.Transport {
-	return common.NewClient(&runner{
+	return transport.NewClient(&runner{
 		UploadPackBin:  uploadPackBin,
 		ReceivePackBin: receivePackBin,
 	})
@@ -73,8 +77,8 @@ func prefixExecPath(cmd string) (string, error) {
 	return cmd, nil
 }
 
-func (r *runner) Command(cmd string, ep *transport.Endpoint, auth transport.AuthMethod,
-) (common.Command, error) {
+func (r *runner) Command(cmd string, ep *transport.Endpoint, _ transport.AuthMethod,
+) (transport.Command, error) {
 
 	switch cmd {
 	case transport.UploadPackServiceName:
@@ -95,7 +99,23 @@ func (r *runner) Command(cmd string, ep *transport.Endpoint, auth transport.Auth
 		}
 	}
 
-	return &command{cmd: execabs.Command(cmd, ep.Path)}, nil
+	return &command{cmd: execabs.Command(cmd, adjustPathForWindows(ep.Path))}, nil
+}
+
+func isDriveLetter(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+// On Windows, the path that results from a file: URL has a leading slash. This
+// has to be removed if there's a drive letter
+func adjustPathForWindows(p string) string {
+	if runtime.GOOS != "windows" {
+		return p
+	}
+	if len(p) >= 3 && p[0] == '/' && isDriveLetter(p[1]) && p[2] == ':' {
+		return p[1:]
+	}
+	return p
 }
 
 type command struct {

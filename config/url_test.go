@@ -1,24 +1,30 @@
 package config
 
 import (
-	. "gopkg.in/check.v1"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
-type URLSuite struct{}
-
-var _ = Suite(&URLSuite{})
-
-func (b *URLSuite) TestValidateInsteadOf(c *C) {
-	goodURL := URL{
-		Name:      "ssh://github.com",
-		InsteadOf: "http://github.com",
-	}
-	badURL := URL{}
-	c.Assert(goodURL.Validate(), IsNil)
-	c.Assert(badURL.Validate(), NotNil)
+type URLSuite struct {
+	suite.Suite
 }
 
-func (b *URLSuite) TestMarshal(c *C) {
+func TestURLSuite(t *testing.T) {
+	suite.Run(t, new(URLSuite))
+}
+
+func (b *URLSuite) TestValidateInsteadOf() {
+	goodURL := URL{
+		Name:       "ssh://github.com",
+		InsteadOfs: []string{"http://github.com"},
+	}
+	badURL := URL{}
+	b.Nil(goodURL.Validate())
+	b.NotNil(badURL.Validate())
+}
+
+func (b *URLSuite) TestMarshal() {
 	expected := []byte(`[core]
 	bare = false
 [url "ssh://git@github.com/"]
@@ -27,16 +33,35 @@ func (b *URLSuite) TestMarshal(c *C) {
 
 	cfg := NewConfig()
 	cfg.URLs["ssh://git@github.com/"] = &URL{
-		Name:      "ssh://git@github.com/",
-		InsteadOf: "https://github.com/",
+		Name:       "ssh://git@github.com/",
+		InsteadOfs: []string{"https://github.com/"},
 	}
 
 	actual, err := cfg.Marshal()
-	c.Assert(err, IsNil)
-	c.Assert(string(actual), Equals, string(expected))
+	b.Nil(err)
+	b.Equal(string(expected), string(actual))
 }
 
-func (b *URLSuite) TestUnmarshal(c *C) {
+func (b *URLSuite) TestMarshalMultipleInsteadOf() {
+	expected := []byte(`[core]
+	bare = false
+[url "ssh://git@github.com/"]
+	insteadOf = https://github.com/
+	insteadOf = https://google.com/
+`)
+
+	cfg := NewConfig()
+	cfg.URLs["ssh://git@github.com/"] = &URL{
+		Name:       "ssh://git@github.com/",
+		InsteadOfs: []string{"https://github.com/", "https://google.com/"},
+	}
+
+	actual, err := cfg.Marshal()
+	b.NoError(err)
+	b.Equal(string(expected), string(actual))
+}
+
+func (b *URLSuite) TestUnmarshal() {
 	input := []byte(`[core]
 	bare = false
 [url "ssh://git@github.com/"]
@@ -45,18 +70,72 @@ func (b *URLSuite) TestUnmarshal(c *C) {
 
 	cfg := NewConfig()
 	err := cfg.Unmarshal(input)
-	c.Assert(err, IsNil)
+	b.NoError(err)
 	url := cfg.URLs["ssh://git@github.com/"]
-	c.Assert(url.Name, Equals, "ssh://git@github.com/")
-	c.Assert(url.InsteadOf, Equals, "https://github.com/")
+	b.Equal("ssh://git@github.com/", url.Name)
+	b.Equal("https://github.com/", url.InsteadOfs[0])
 }
 
-func (b *URLSuite) TestApplyInsteadOf(c *C) {
+func (b *URLSuite) TestUnmarshalMultipleInsteadOf() {
+	input := []byte(`[core]
+	bare = false
+[url "ssh://git@github.com/"]
+	insteadOf = https://github.com/
+	insteadOf = https://google.com/
+`)
+
+	cfg := NewConfig()
+	err := cfg.Unmarshal(input)
+	b.Nil(err)
+	url := cfg.URLs["ssh://git@github.com/"]
+	b.Equal("ssh://git@github.com/", url.Name)
+
+	b.Equal("ssh://git@github.com/foobar", url.ApplyInsteadOf("https://github.com/foobar"))
+	b.Equal("ssh://git@github.com/foobar", url.ApplyInsteadOf("https://google.com/foobar"))
+}
+
+func (b *URLSuite) TestUnmarshalDuplicateUrls() {
+	input := []byte(`[core]
+	bare = false
+[url "ssh://git@github.com/"]
+	insteadOf = https://github.com/
+[url "ssh://git@github.com/"]
+	insteadOf = https://google.com/
+`)
+
+	cfg := NewConfig()
+	err := cfg.Unmarshal(input)
+	b.Nil(err)
+	url := cfg.URLs["ssh://git@github.com/"]
+	b.Equal("ssh://git@github.com/", url.Name)
+
+	b.Equal("ssh://git@github.com/foobar", url.ApplyInsteadOf("https://github.com/foobar"))
+	b.Equal("ssh://git@github.com/foobar", url.ApplyInsteadOf("https://google.com/foobar"))
+}
+
+func (b *URLSuite) TestApplyInsteadOf() {
 	urlRule := URL{
-		Name:      "ssh://github.com",
-		InsteadOf: "http://github.com",
+		Name:       "ssh://github.com",
+		InsteadOfs: []string{"http://github.com"},
 	}
 
-	c.Assert(urlRule.ApplyInsteadOf("http://google.com"), Equals, "http://google.com")
-	c.Assert(urlRule.ApplyInsteadOf("http://github.com/myrepo"), Equals, "ssh://github.com/myrepo")
+	b.Equal("http://google.com", urlRule.ApplyInsteadOf("http://google.com"))
+	b.Equal("ssh://github.com/myrepo", urlRule.ApplyInsteadOf("http://github.com/myrepo"))
+}
+
+func (b *URLSuite) TestFindLongestInsteadOfMatch() {
+	urlRules := map[string]*URL{
+		"ssh://github.com": &URL{
+			Name:       "ssh://github.com",
+			InsteadOfs: []string{"http://github.com"},
+		},
+		"ssh://somethingelse.com": &URL{
+			Name:       "ssh://somethingelse.com",
+			InsteadOfs: []string{"http://github.com/foobar"},
+		},
+	}
+
+	longestUrl := findLongestInsteadOfMatch("http://github.com/foobar/bingbash.git", urlRules)
+
+	b.Equal("ssh://somethingelse.com", longestUrl.Name)
 }
