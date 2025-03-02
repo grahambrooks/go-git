@@ -22,6 +22,11 @@ import (
 	"github.com/grahambrooks/go-git/v5/utils/ioutil"
 )
 
+func init() {
+	transport.Register("http", DefaultClient)
+	transport.Register("https", DefaultClient)
+}
+
 // it requires a bytes.Buffer, because we need to know the length
 func applyHeadersToRequest(req *http.Request, content *bytes.Buffer, host string, requestType string) {
 	req.Header.Add("User-Agent", "git/1.0")
@@ -430,11 +435,11 @@ func NewErr(r *http.Response) error {
 
 	switch r.StatusCode {
 	case http.StatusUnauthorized:
-		return transport.ErrAuthenticationRequired
+		return fmt.Errorf("%w: %s", transport.ErrAuthenticationRequired, reason)
 	case http.StatusForbidden:
-		return transport.ErrAuthorizationFailed
+		return fmt.Errorf("%w: %s", transport.ErrAuthorizationFailed, reason)
 	case http.StatusNotFound:
-		return transport.ErrRepositoryNotFound
+		return fmt.Errorf("%w: %s", transport.ErrRepositoryNotFound, reason)
 	}
 
 	return plumbing.NewUnexpectedError(&Err{r, reason})

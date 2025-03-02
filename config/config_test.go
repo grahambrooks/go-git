@@ -1,21 +1,27 @@
 package config
 
 import (
+	"github.com/grahambrooks/go-git/v5/plumbing/protocol"
 	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-billy/v5/util"
 	"github.com/grahambrooks/go-git/v5/plumbing"
-	. "gopkg.in/check.v1"
+	"github.com/stretchr/testify/suite"
 )
 
-type ConfigSuite struct{}
+type ConfigSuite struct {
+	suite.Suite
+}
 
-var _ = Suite(&ConfigSuite{})
+func TestConfigSuite(t *testing.T) {
+	suite.Run(t, new(ConfigSuite))
+}
 
-func (s *ConfigSuite) TestUnmarshal(c *C) {
+func (s *ConfigSuite) TestUnmarshal() {
 	input := []byte(`[core]
 		bare = true
 		worktree = foo
@@ -59,39 +65,39 @@ func (s *ConfigSuite) TestUnmarshal(c *C) {
 
 	cfg := NewConfig()
 	err := cfg.Unmarshal(input)
-	c.Assert(err, IsNil)
+	s.NoError(err)
 
-	c.Assert(cfg.Core.IsBare, Equals, true)
-	c.Assert(cfg.Core.Worktree, Equals, "foo")
-	c.Assert(cfg.Core.CommentChar, Equals, "bar")
-	c.Assert(cfg.User.Name, Equals, "John Doe")
-	c.Assert(cfg.User.Email, Equals, "john@example.com")
-	c.Assert(cfg.Author.Name, Equals, "Jane Roe")
-	c.Assert(cfg.Author.Email, Equals, "jane@example.com")
-	c.Assert(cfg.Committer.Name, Equals, "Richard Roe")
-	c.Assert(cfg.Committer.Email, Equals, "richard@example.com")
-	c.Assert(cfg.Pack.Window, Equals, uint(20))
-	c.Assert(cfg.Remotes, HasLen, 4)
-	c.Assert(cfg.Remotes["origin"].Name, Equals, "origin")
-	c.Assert(cfg.Remotes["origin"].URLs, DeepEquals, []string{"git@github.com:mcuadros/go-git.git"})
-	c.Assert(cfg.Remotes["origin"].Fetch, DeepEquals, []RefSpec{"+refs/heads/*:refs/remotes/origin/*"})
-	c.Assert(cfg.Remotes["alt"].Name, Equals, "alt")
-	c.Assert(cfg.Remotes["alt"].URLs, DeepEquals, []string{"git@github.com:mcuadros/go-git.git", "git@github.com:src-d/go-git.git"})
-	c.Assert(cfg.Remotes["alt"].Fetch, DeepEquals, []RefSpec{"+refs/heads/*:refs/remotes/origin/*", "+refs/pull/*:refs/remotes/origin/pull/*"})
-	c.Assert(cfg.Remotes["win-local"].Name, Equals, "win-local")
-	c.Assert(cfg.Remotes["win-local"].URLs, DeepEquals, []string{"X:\\Git\\"})
-	c.Assert(cfg.Remotes["insteadOf"].URLs, DeepEquals, []string{"ssh://git@github.com/kostyay/go-git.git"})
-	c.Assert(cfg.Submodules, HasLen, 1)
-	c.Assert(cfg.Submodules["qux"].Name, Equals, "qux")
-	c.Assert(cfg.Submodules["qux"].URL, Equals, "https://github.com/foo/qux.git")
-	c.Assert(cfg.Submodules["qux"].Branch, Equals, "bar")
-	c.Assert(cfg.Branches["master"].Remote, Equals, "origin")
-	c.Assert(cfg.Branches["master"].Merge, Equals, plumbing.ReferenceName("refs/heads/master"))
-	c.Assert(cfg.Branches["master"].Description, Equals, "Add support for branch description.\n\nEdit branch description: git branch --edit-description\n")
-	c.Assert(cfg.Init.DefaultBranch, Equals, "main")
+	s.True(cfg.Core.IsBare)
+	s.Equal("foo", cfg.Core.Worktree)
+	s.Equal("bar", cfg.Core.CommentChar)
+	s.Equal("John Doe", cfg.User.Name)
+	s.Equal("john@example.com", cfg.User.Email)
+	s.Equal("Jane Roe", cfg.Author.Name)
+	s.Equal("jane@example.com", cfg.Author.Email)
+	s.Equal("Richard Roe", cfg.Committer.Name)
+	s.Equal("richard@example.com", cfg.Committer.Email)
+	s.Equal(uint(20), cfg.Pack.Window)
+	s.Len(cfg.Remotes, 4)
+	s.Equal("origin", cfg.Remotes["origin"].Name)
+	s.Equal([]string{"git@github.com:mcuadros/go-git.git"}, cfg.Remotes["origin"].URLs)
+	s.Equal([]RefSpec{"+refs/heads/*:refs/remotes/origin/*"}, cfg.Remotes["origin"].Fetch)
+	s.Equal("alt", cfg.Remotes["alt"].Name)
+	s.Equal([]string{"git@github.com:mcuadros/go-git.git", "git@github.com:src-d/go-git.git"}, cfg.Remotes["alt"].URLs)
+	s.Equal([]RefSpec{"+refs/heads/*:refs/remotes/origin/*", "+refs/pull/*:refs/remotes/origin/pull/*"}, cfg.Remotes["alt"].Fetch)
+	s.Equal("win-local", cfg.Remotes["win-local"].Name)
+	s.Equal([]string{"X:\\Git\\"}, cfg.Remotes["win-local"].URLs)
+	s.Equal([]string{"ssh://git@github.com/kostyay/go-git.git"}, cfg.Remotes["insteadOf"].URLs)
+	s.Len(cfg.Submodules, 1)
+	s.Equal("qux", cfg.Submodules["qux"].Name)
+	s.Equal("https://github.com/foo/qux.git", cfg.Submodules["qux"].URL)
+	s.Equal("bar", cfg.Submodules["qux"].Branch)
+	s.Equal("origin", cfg.Branches["master"].Remote)
+	s.Equal(plumbing.ReferenceName("refs/heads/master"), cfg.Branches["master"].Merge)
+	s.Equal("Add support for branch description.\n\nEdit branch description: git branch --edit-description\n", cfg.Branches["master"].Description)
+	s.Equal("main", cfg.Init.DefaultBranch)
 }
 
-func (s *ConfigSuite) TestMarshal(c *C) {
+func (s *ConfigSuite) TestMarshal() {
 	output := []byte(`[core]
 	bare = true
 	worktree = bar
@@ -159,17 +165,17 @@ func (s *ConfigSuite) TestMarshal(c *C) {
 	}
 
 	cfg.URLs["ssh://git@github.com/"] = &URL{
-		Name:      "ssh://git@github.com/",
-		InsteadOf: "https://github.com/",
+		Name:       "ssh://git@github.com/",
+		InsteadOfs: []string{"https://github.com/"},
 	}
 
 	b, err := cfg.Marshal()
-	c.Assert(err, IsNil)
+	s.NoError(err)
 
-	c.Assert(string(b), Equals, string(output))
+	s.Equal(string(output), string(b))
 }
 
-func (s *ConfigSuite) TestUnmarshalMarshal(c *C) {
+func (s *ConfigSuite) TestUnmarshalMarshal() {
 	input := []byte(`[core]
 	bare = true
 	worktree = foo
@@ -202,24 +208,24 @@ func (s *ConfigSuite) TestUnmarshalMarshal(c *C) {
 
 	cfg := NewConfig()
 	err := cfg.Unmarshal(input)
-	c.Assert(err, IsNil)
+	s.NoError(err)
 
 	output, err := cfg.Marshal()
-	c.Assert(err, IsNil)
-	c.Assert(string(output), DeepEquals, string(input))
+	s.NoError(err)
+	s.Equal(string(input), string(output))
 }
 
-func (s *ConfigSuite) TestLoadConfigXDG(c *C) {
+func (s *ConfigSuite) TestLoadConfigXDG() {
 	cfg := NewConfig()
 	cfg.User.Name = "foo"
 	cfg.User.Email = "foo@foo.com"
 
 	tmp, err := util.TempDir(osfs.Default, "", "test-commit-options")
-	c.Assert(err, IsNil)
+	s.NoError(err)
 	defer util.RemoveAll(osfs.Default, tmp)
 
 	err = osfs.Default.MkdirAll(filepath.Join(tmp, "git"), 0777)
-	c.Assert(err, IsNil)
+	s.NoError(err)
 
 	os.Setenv("XDG_CONFIG_HOME", tmp)
 	defer func() {
@@ -227,19 +233,19 @@ func (s *ConfigSuite) TestLoadConfigXDG(c *C) {
 	}()
 
 	content, err := cfg.Marshal()
-	c.Assert(err, IsNil)
+	s.NoError(err)
 
 	cfgFile := filepath.Join(tmp, "git/config")
 	err = util.WriteFile(osfs.Default, cfgFile, content, 0777)
-	c.Assert(err, IsNil)
+	s.NoError(err)
 
 	cfg, err = LoadConfig(GlobalScope)
-	c.Assert(err, IsNil)
+	s.NoError(err)
 
-	c.Assert(cfg.User.Email, Equals, "foo@foo.com")
+	s.Equal("foo@foo.com", cfg.User.Email)
 }
 
-func (s *ConfigSuite) TestValidateConfig(c *C) {
+func (s *ConfigSuite) TestValidateConfig() {
 	config := &Config{
 		Remotes: map[string]*RemoteConfig{
 			"bar": {
@@ -259,49 +265,49 @@ func (s *ConfigSuite) TestValidateConfig(c *C) {
 		},
 	}
 
-	c.Assert(config.Validate(), IsNil)
+	s.NoError(config.Validate())
 }
 
-func (s *ConfigSuite) TestValidateInvalidRemote(c *C) {
+func (s *ConfigSuite) TestValidateInvalidRemote() {
 	config := &Config{
 		Remotes: map[string]*RemoteConfig{
 			"foo": {Name: "foo"},
 		},
 	}
 
-	c.Assert(config.Validate(), Equals, ErrRemoteConfigEmptyURL)
+	s.ErrorIs(config.Validate(), ErrRemoteConfigEmptyURL)
 }
 
-func (s *ConfigSuite) TestValidateInvalidRemoteKey(c *C) {
+func (s *ConfigSuite) TestValidateInvalidRemoteKey() {
 	config := &Config{
 		Remotes: map[string]*RemoteConfig{
 			"bar": {Name: "foo"},
 		},
 	}
 
-	c.Assert(config.Validate(), Equals, ErrInvalid)
+	s.ErrorIs(config.Validate(), ErrInvalid)
 }
 
-func (s *ConfigSuite) TestRemoteConfigValidateMissingURL(c *C) {
+func (s *ConfigSuite) TestRemoteConfigValidateMissingURL() {
 	config := &RemoteConfig{Name: "foo"}
-	c.Assert(config.Validate(), Equals, ErrRemoteConfigEmptyURL)
+	s.ErrorIs(config.Validate(), ErrRemoteConfigEmptyURL)
 }
 
-func (s *ConfigSuite) TestRemoteConfigValidateMissingName(c *C) {
+func (s *ConfigSuite) TestRemoteConfigValidateMissingName() {
 	config := &RemoteConfig{}
-	c.Assert(config.Validate(), Equals, ErrRemoteConfigEmptyName)
+	s.ErrorIs(config.Validate(), ErrRemoteConfigEmptyName)
 }
 
-func (s *ConfigSuite) TestRemoteConfigValidateDefault(c *C) {
+func (s *ConfigSuite) TestRemoteConfigValidateDefault() {
 	config := &RemoteConfig{Name: "foo", URLs: []string{"http://foo/bar"}}
-	c.Assert(config.Validate(), IsNil)
+	s.NoError(config.Validate())
 
 	fetch := config.Fetch
-	c.Assert(fetch, HasLen, 1)
-	c.Assert(fetch[0].String(), Equals, "+refs/heads/*:refs/remotes/foo/*")
+	s.Len(fetch, 1)
+	s.Equal("+refs/heads/*:refs/remotes/foo/*", fetch[0].String())
 }
 
-func (s *ConfigSuite) TestValidateInvalidBranchKey(c *C) {
+func (s *ConfigSuite) TestValidateInvalidBranchKey() {
 	config := &Config{
 		Branches: map[string]*Branch{
 			"foo": {
@@ -312,10 +318,10 @@ func (s *ConfigSuite) TestValidateInvalidBranchKey(c *C) {
 		},
 	}
 
-	c.Assert(config.Validate(), Equals, ErrInvalid)
+	s.ErrorIs(config.Validate(), ErrInvalid)
 }
 
-func (s *ConfigSuite) TestValidateInvalidBranch(c *C) {
+func (s *ConfigSuite) TestValidateInvalidBranch() {
 	config := &Config{
 		Branches: map[string]*Branch{
 			"bar": {
@@ -331,26 +337,26 @@ func (s *ConfigSuite) TestValidateInvalidBranch(c *C) {
 		},
 	}
 
-	c.Assert(config.Validate(), Equals, errBranchInvalidMerge)
+	s.ErrorIs(config.Validate(), errBranchInvalidMerge)
 }
 
-func (s *ConfigSuite) TestRemoteConfigDefaultValues(c *C) {
+func (s *ConfigSuite) TestRemoteConfigDefaultValues() {
 	config := NewConfig()
 
-	c.Assert(config.Remotes, HasLen, 0)
-	c.Assert(config.Branches, HasLen, 0)
-	c.Assert(config.Submodules, HasLen, 0)
-	c.Assert(config.Raw, NotNil)
-	c.Assert(config.Pack.Window, Equals, DefaultPackWindow)
+	s.Len(config.Remotes, 0)
+	s.Len(config.Branches, 0)
+	s.Len(config.Submodules, 0)
+	s.NotNil(config.Raw)
+	s.Equal(DefaultPackWindow, config.Pack.Window)
 }
 
-func (s *ConfigSuite) TestLoadConfigLocalScope(c *C) {
+func (s *ConfigSuite) TestLoadConfigLocalScope() {
 	cfg, err := LoadConfig(LocalScope)
-	c.Assert(err, NotNil)
-	c.Assert(cfg, IsNil)
+	s.NotNil(err)
+	s.Nil(cfg)
 }
 
-func (s *ConfigSuite) TestRemoveUrlOptions(c *C) {
+func (s *ConfigSuite) TestRemoveUrlOptions() {
 	buf := []byte(`
 [remote "alt"]
 	url = git@github.com:mcuadros/go-git.git
@@ -360,14 +366,57 @@ func (s *ConfigSuite) TestRemoveUrlOptions(c *C) {
 
 	cfg := NewConfig()
 	err := cfg.Unmarshal(buf)
-	c.Assert(err, IsNil)
-	c.Assert(len(cfg.Remotes), Equals, 1)
+	s.NoError(err)
+	s.Len(cfg.Remotes, 1)
 	cfg.Remotes["alt"].URLs = []string{}
 
 	buf, err = cfg.Marshal()
-	c.Assert(err, IsNil)
+	s.NoError(err)
 	if strings.Contains(string(buf), "url") {
-		c.Fatal("conifg should not contain any url sections")
+		s.Fail("config should not contain any url sections")
 	}
-	c.Assert(err, IsNil)
+	s.NoError(err)
+}
+
+func (s *ConfigSuite) TestProtocol() {
+	buf := []byte(`
+[protocol]
+	version = 1`)
+
+	cfg := NewConfig()
+	err := cfg.Unmarshal(buf)
+	s.NoError(err)
+	s.Equal(protocol.V1, cfg.Protocol.Version)
+
+	cfg.Protocol.Version = protocol.V2
+	buf, err = cfg.Marshal()
+	s.NoError(err)
+
+	if !strings.Contains(string(buf), "version = 2") {
+		s.Fail("marshal did not update version")
+	}
+	s.NoError(err)
+}
+
+func (s *ConfigSuite) TestUnmarshalRemotes() {
+	input := []byte(`[core]
+	bare = true
+	worktree = foo
+	custom = ignored
+[user]
+	name = John Doe
+	email = john@example.com
+[remote "origin"]
+	url = https://git.sr.ht/~mcepl/go-git
+	pushurl = git@git.sr.ht:~mcepl/go-git.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+	mirror = true
+`)
+
+	cfg := NewConfig()
+	err := cfg.Unmarshal(input)
+	s.NoError(err)
+
+	s.Equal("https://git.sr.ht/~mcepl/go-git", cfg.Remotes["origin"].URLs[0])
+	s.Equal("git@git.sr.ht:~mcepl/go-git.git", cfg.Remotes["origin"].URLs[1])
 }

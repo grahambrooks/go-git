@@ -1,10 +1,9 @@
 package packp
 
 import (
+	"bufio"
 	"errors"
 	"io"
-
-	"bufio"
 
 	"github.com/grahambrooks/go-git/v5/plumbing/protocol/packp/capability"
 	"github.com/grahambrooks/go-git/v5/utils/ioutil"
@@ -17,6 +16,7 @@ var ErrUploadPackResponseNotDecoded = errors.New("upload-pack-response should be
 // UploadPackResponse contains all the information responded by the upload-pack
 // service, the response implements io.ReadCloser that allows to read the
 // packfile directly from it.
+// TODO: v6, to be removed
 type UploadPackResponse struct {
 	ShallowUpdate
 	ServerResponse
@@ -34,8 +34,9 @@ func NewUploadPackResponse(req *UploadPackRequest) *UploadPackResponse {
 		req.Capabilities.Supports(capability.MultiACKDetailed)
 
 	return &UploadPackResponse{
-		isShallow:  isShallow,
-		isMultiACK: isMultiACK,
+		isShallow:      isShallow,
+		isMultiACK:     isMultiACK,
+		ServerResponse: ServerResponse{req: req},
 	}
 }
 
@@ -78,7 +79,7 @@ func (r *UploadPackResponse) Encode(w io.Writer) (err error) {
 		}
 	}
 
-	if err := r.ServerResponse.Encode(w, r.isMultiACK); err != nil {
+	if err := r.ServerResponse.Encode(w); err != nil {
 		return err
 	}
 
