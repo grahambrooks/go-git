@@ -10,11 +10,11 @@ import (
 	"time"
 
 	fixtures "github.com/go-git/go-git-fixtures/v4"
-	"github.com/grahambrooks/go-git/v5/plumbing"
-	"github.com/grahambrooks/go-git/v5/plumbing/cache"
-
-	"github.com/grahambrooks/go-git/v5/storage/filesystem"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/cache"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/go-git/go-git/v5/storage/filesystem"
 )
 
 type SuiteCommit struct {

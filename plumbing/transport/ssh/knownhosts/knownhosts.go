@@ -30,7 +30,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/grahambrooks/go-git/v5/utils/trace"
+	"github.com/go-git/go-git/v5/utils/trace"
 	"golang.org/x/crypto/ssh"
 	xknownhosts "golang.org/x/crypto/ssh/knownhosts"
 )

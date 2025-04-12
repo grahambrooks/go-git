@@ -1,13 +1,13 @@
 package server_test
 
 import (
-	"github.com/grahambrooks/go-git/v5/internal/transport/test"
-	"github.com/grahambrooks/go-git/v5/plumbing/cache"
-	"github.com/grahambrooks/go-git/v5/plumbing/server"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport/file"
-	"github.com/grahambrooks/go-git/v5/storage/filesystem"
-	"github.com/grahambrooks/go-git/v5/storage/memory"
+	"github.com/go-git/go-git/v5/internal/transport/test"
+	"github.com/go-git/go-git/v5/plumbing/cache"
+	"github.com/go-git/go-git/v5/plumbing/server"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/file"
+	"github.com/go-git/go-git/v5/storage/filesystem"
+	"github.com/go-git/go-git/v5/storage/memory"
 
 	fixtures "github.com/go-git/go-git-fixtures/v4"
 )

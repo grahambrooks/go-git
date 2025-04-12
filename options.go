@@ -3,18 +3,18 @@ package git
 import (
 	"errors"
 	"fmt"
-	"github.com/grahambrooks/go-git/v5/plumbing/protocol/packp"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/grahambrooks/go-git/v5/config"
-	"github.com/grahambrooks/go-git/v5/plumbing"
-	formatcfg "github.com/grahambrooks/go-git/v5/plumbing/format/config"
-	"github.com/grahambrooks/go-git/v5/plumbing/object"
-	"github.com/grahambrooks/go-git/v5/plumbing/protocol/packp/sideband"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport"
-	"golang.org/x/crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	formatcfg "github.com/go-git/go-git/v5/plumbing/format/config"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp/sideband"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 )
 
 // SubmoduleRecursivity defines how depth will affect any submodule recursive

@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/grahambrooks/go-git/v5/plumbing/format/pktline"
+	"github.com/go-git/go-git/v5/plumbing/format/pktline"
 	"github.com/stretchr/testify/suite"
 )
 

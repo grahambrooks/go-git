@@ -9,11 +9,11 @@ import (
 	"io"
 	"sync"
 
-	"github.com/grahambrooks/go-git/v5/plumbing"
-	gogithash "github.com/grahambrooks/go-git/v5/plumbing/hash"
-	"github.com/grahambrooks/go-git/v5/plumbing/storer"
-	"github.com/grahambrooks/go-git/v5/utils/binary"
-	gogitsync "github.com/grahambrooks/go-git/v5/utils/sync"
+	"github.com/go-git/go-git/v5/plumbing"
+	gogithash "github.com/go-git/go-git/v5/plumbing/hash"
+	"github.com/go-git/go-git/v5/plumbing/storer"
+	"github.com/go-git/go-git/v5/utils/binary"
+	gogitsync "github.com/go-git/go-git/v5/utils/sync"
 )
 
 var (

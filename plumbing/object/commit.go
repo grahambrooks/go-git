@@ -8,12 +8,12 @@ import (
 	"io"
 	"strings"
 
-	"golang.org/x/crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp"
 
-	"github.com/grahambrooks/go-git/v5/plumbing"
-	"github.com/grahambrooks/go-git/v5/plumbing/storer"
-	"github.com/grahambrooks/go-git/v5/utils/ioutil"
-	"github.com/grahambrooks/go-git/v5/utils/sync"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/storer"
+	"github.com/go-git/go-git/v5/utils/ioutil"
+	"github.com/go-git/go-git/v5/utils/sync"
 )
 
 const (
@@ -428,7 +428,7 @@ func (c *Commit) Verify(armoredKeyRing string) (*openpgp.Entity, error) {
 		return nil, err
 	}
 
-	return openpgp.CheckArmoredDetachedSignature(keyring, er, signature)
+	return openpgp.CheckArmoredDetachedSignature(keyring, er, signature, nil)
 }
 
 // Less defines a compare function to determine which commit is 'earlier' by:

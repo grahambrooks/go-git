@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/grahambrooks/go-git/v5/utils/merkletrie/noder"
+	"github.com/go-git/go-git/v5/utils/merkletrie/noder"
 	"github.com/stretchr/testify/suite"
 )
 

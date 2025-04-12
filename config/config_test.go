@@ -1,7 +1,6 @@
 package config
 
 import (
-	"github.com/grahambrooks/go-git/v5/plumbing/protocol"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,7 +8,8 @@ import (
 
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-billy/v5/util"
-	"github.com/grahambrooks/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/protocol"
 	"github.com/stretchr/testify/suite"
 )
 

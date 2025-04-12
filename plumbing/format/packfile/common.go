@@ -1,13 +1,13 @@
 package packfile
 
 import (
-	"github.com/grahambrooks/go-git/v5/utils/sync"
-	"github.com/grahambrooks/go-git/v5/utils/trace"
 	"io"
 	"time"
 
-	"github.com/grahambrooks/go-git/v5/plumbing/storer"
-	"github.com/grahambrooks/go-git/v5/utils/ioutil"
+	"github.com/go-git/go-git/v5/plumbing/storer"
+	"github.com/go-git/go-git/v5/utils/ioutil"
+	"github.com/go-git/go-git/v5/utils/sync"
+	"github.com/go-git/go-git/v5/utils/trace"
 )
 
 var signature = []byte{'P', 'A', 'C', 'K'}

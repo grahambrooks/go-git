@@ -3,9 +3,6 @@ package git
 import (
 	"bytes"
 	"fmt"
-	fixtures "github.com/go-git/go-git-fixtures/v4"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"log"
 	"os"
 	"os/exec"
@@ -15,18 +12,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/grahambrooks/go-git/v5/plumbing"
-	"github.com/grahambrooks/go-git/v5/plumbing/cache"
-	"github.com/grahambrooks/go-git/v5/plumbing/object"
-	"github.com/grahambrooks/go-git/v5/plumbing/storer"
-	"github.com/grahambrooks/go-git/v5/storage/filesystem"
-	"github.com/grahambrooks/go-git/v5/storage/memory"
+	fixtures "github.com/go-git/go-git-fixtures/v4"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/cache"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/storer"
+	"github.com/go-git/go-git/v5/storage/filesystem"
+	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/errors"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/util"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
-	"golang.org/x/crypto/openpgp/errors"
 )
 
 func (s *WorktreeSuite) TestCommitEmptyOptions() {
@@ -630,7 +630,7 @@ func (s *WorktreeSuite) TestCommitTreeSort() {
 	s.NoError(err, fmt.Sprintf("%s", buf.Bytes()))
 }
 
-// https://github.com/grahambrooks/go-git/pull/224
+// https://github.com/go-git/go-git/pull/224
 func (s *WorktreeSuite) TestJustStoreObjectsNotAlreadyStored() {
 	fs := s.TemporalFilesystem()
 

@@ -1,6 +1,6 @@
 package packfile
 
-import "github.com/grahambrooks/go-git/v5/plumbing"
+import "github.com/go-git/go-git/v5/plumbing"
 
 type ScannerOption func(*Scanner)
 

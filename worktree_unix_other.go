@@ -1,4 +1,3 @@
-//go:build openbsd || dragonfly || solaris
 // +build openbsd dragonfly solaris
 
 package git
@@ -7,7 +6,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/grahambrooks/go-git/v5/plumbing/format/index"
+	"github.com/go-git/go-git/v5/plumbing/format/index"
 )
 
 func init() {

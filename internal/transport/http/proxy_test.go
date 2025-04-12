@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/elazarl/goproxy"
-	"github.com/grahambrooks/go-git/v5/internal/transport/http/test"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/internal/transport/http/test"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/stretchr/testify/suite"
 )
 

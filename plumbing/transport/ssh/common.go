@@ -4,13 +4,14 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"github.com/grahambrooks/go-git/v5/utils/trace"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
 
-	"github.com/grahambrooks/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/utils/trace"
+
 	"github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/proxy"
@@ -139,7 +140,7 @@ func (c *command) connect() error {
 		config.HostKeyAlgorithms = db.HostKeyAlgorithms(hostWithPort)
 	} else if len(config.HostKeyAlgorithms) == 0 {
 		// Set the HostKeyAlgorithms based on HostKeyCallback.
-		// For background see https://github.com/grahambrooks/go-git/issues/411 as well as
+		// For background see https://github.com/go-git/go-git/issues/411 as well as
 		// https://github.com/golang/go/issues/29286 for root cause.
 		db, err := newKnownHostsDb()
 		if err != nil {

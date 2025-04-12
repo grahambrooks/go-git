@@ -1,11 +1,13 @@
 package git
 
 import (
-	"github.com/grahambrooks/go-git/v5/plumbing"
-	"github.com/grahambrooks/go-git/v5/plumbing/object"
 	"fmt"
 	"testing"
+
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/suite"
+
 	fixtures "github.com/go-git/go-git-fixtures/v4"
 )
 

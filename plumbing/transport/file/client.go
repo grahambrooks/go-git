@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/grahambrooks/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	"golang.org/x/sys/execabs"
 )
 
@@ -77,7 +77,7 @@ func prefixExecPath(cmd string) (string, error) {
 	return cmd, nil
 }
 
-func (r *runner) Command(cmd string, ep *transport.Endpoint, _ transport.AuthMethod,
+func (r *runner) Command(cmd string, ep *transport.Endpoint, auth transport.AuthMethod,
 ) (transport.Command, error) {
 
 	switch cmd {

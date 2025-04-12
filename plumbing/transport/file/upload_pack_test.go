@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/grahambrooks/go-git/v5/internal/transport/test"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/internal/transport/test"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/stretchr/testify/suite"
 
 	fixtures "github.com/go-git/go-git-fixtures/v4"

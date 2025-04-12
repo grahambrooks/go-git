@@ -3,8 +3,8 @@ package transactional
 import (
 	"testing"
 
-	"github.com/grahambrooks/go-git/v5/plumbing/format/index"
-	"github.com/grahambrooks/go-git/v5/storage/memory"
+	"github.com/go-git/go-git/v5/plumbing/format/index"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/suite"
 )
 

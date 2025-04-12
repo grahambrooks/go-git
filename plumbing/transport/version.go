@@ -3,9 +3,9 @@ package transport
 import (
 	"strings"
 
-	"github.com/grahambrooks/go-git/v5/plumbing/format/pktline"
-	"github.com/grahambrooks/go-git/v5/plumbing/protocol"
-	"github.com/grahambrooks/go-git/v5/utils/ioutil"
+	"github.com/go-git/go-git/v5/plumbing/format/pktline"
+	"github.com/go-git/go-git/v5/plumbing/protocol"
+	"github.com/go-git/go-git/v5/utils/ioutil"
 )
 
 // DiscoverVersion reads the first pktline from the reader to determine the

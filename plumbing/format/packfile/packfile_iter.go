@@ -3,8 +3,8 @@ package packfile
 import (
 	"io"
 
-	"github.com/grahambrooks/go-git/v5/plumbing"
-	"github.com/grahambrooks/go-git/v5/plumbing/format/idxfile"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/format/idxfile"
 )
 
 type objectIter struct {

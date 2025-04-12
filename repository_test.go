@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/grahambrooks/go-git/v5/plumbing/protocol/packp"
 	"io"
 	"os"
 	"os/exec"
@@ -21,19 +20,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
-	openpgperr "golang.org/x/crypto/openpgp/errors"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	openpgperr "github.com/ProtonMail/go-crypto/openpgp/errors"
 
-	"github.com/grahambrooks/go-git/v5/config"
-	"github.com/grahambrooks/go-git/v5/plumbing"
-	"github.com/grahambrooks/go-git/v5/plumbing/cache"
-	"github.com/grahambrooks/go-git/v5/plumbing/object"
-	"github.com/grahambrooks/go-git/v5/plumbing/storer"
-	"github.com/grahambrooks/go-git/v5/plumbing/transport"
-	"github.com/grahambrooks/go-git/v5/storage"
-	"github.com/grahambrooks/go-git/v5/storage/filesystem"
-	"github.com/grahambrooks/go-git/v5/storage/memory"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/cache"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp"
+	"github.com/go-git/go-git/v5/plumbing/storer"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/storage"
+	"github.com/go-git/go-git/v5/storage/filesystem"
+	"github.com/go-git/go-git/v5/storage/memory"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -3494,7 +3494,7 @@ func BenchmarkPlainClone(b *testing.B) {
 	b.StopTimer()
 	clone := func(b *testing.B) {
 		_, err := PlainClone(b.TempDir(), true, &CloneOptions{
-			URL:          "https://github.com/grahambrooks/go-git.git",
+			URL:          "https://github.com/go-git/go-git.git",
 			Depth:        1,
 			Tags:         plumbing.NoTags,
 			SingleBranch: true,

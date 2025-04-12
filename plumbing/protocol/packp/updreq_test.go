@@ -1,7 +1,9 @@
 package packp
 
 import (
-	"github.com/grahambrooks/go-git/v5/plumbing/protocol/packp/capability"
+	"testing"
+
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp/capability"
 	"github.com/stretchr/testify/suite"
 )
 

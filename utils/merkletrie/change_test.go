@@ -1,11 +1,12 @@
 package merkletrie_test
 
 import (
-	"github.com/grahambrooks/go-git/v5/utils/merkletrie"
-	"github.com/grahambrooks/go-git/v5/utils/merkletrie/internal/fsnoder"
-	"github.com/grahambrooks/go-git/v5/utils/merkletrie/noder"
-	"github.com/stretchr/testify/suite"
 	"testing"
+
+	"github.com/go-git/go-git/v5/utils/merkletrie"
+	"github.com/go-git/go-git/v5/utils/merkletrie/internal/fsnoder"
+	"github.com/go-git/go-git/v5/utils/merkletrie/noder"
+	"github.com/stretchr/testify/suite"
 )
 
 type ChangeSuite struct {
